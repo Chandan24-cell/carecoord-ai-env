@@ -1,0 +1,11 @@
+spec_version: 1
+name: care_coord_env
+version: "0.1.0"
+description: Healthcare care-coordination environment for OpenEnv
+action: CareCoordAction
+observation: CareCoordObservation
+state: CareCoordState
+type: space
+runtime: fastapi
+app: server.app:app
+port: 8000
