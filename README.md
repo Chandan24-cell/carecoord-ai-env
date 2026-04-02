@@ -1,153 +1,470 @@
----
-title: CareCoordEnv
-emoji: 🏥
-colorFrom: blue
-colorTo: green
-sdk: docker
-pinned: false
-app_port: 8000
-base_path: /web
-tags:
-  - openenv
-  - healthcare
-  - care-coordination
-  - rl-environment
----
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:1a73e8,100:00bfa5&height=200&section=header&text=CareCoordEnv&fontSize=60&fontColor=ffffff&fontAlignY=38&desc=Healthcare+Operations+Environment+for+AI+Agents&descAlignY=58&descSize=18" width="100%"/>
+</p>
 
-<div align="center">
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
+  <img src="https://img.shields.io/badge/FastAPI-Based-009688?style=for-the-badge&logo=fastapi&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white"/>
+  <img src="https://img.shields.io/badge/OpenEnv-Compatible-4CAF50?style=for-the-badge&logo=checkmarx&logoColor=white"/>
+</p>
 
-# 🏥 CareCoordEnv
+<p align="center">
+  <img src="https://img.shields.io/badge/Status-Active-success?style=flat-square"/>
+  <img src="https://img.shields.io/badge/License-BSD--style-blue?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Tasks-3%20Difficulty%20Levels-orange?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Hackathon-Meta%20PyTorch%20OpenEnv-9b59b6?style=flat-square&logo=meta"/>
+  <img src="https://img.shields.io/badge/HuggingFace-Spaces-FFD21E?style=flat-square&logo=huggingface&logoColor=black"/>
+</p>
 
-**A realistic healthcare operations environment for training and evaluating AI agents on care-coordination tasks.**
+<p align="center">
+  <strong>A realistic healthcare operations environment for training and evaluating AI agents on care-coordination tasks.</strong>
+</p>
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![OpenEnv](https://img.shields.io/badge/OpenEnv-Compatible-green?style=for-the-badge)](https://github.com/)
-[![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)](https://github.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-
-*Built for the Meta PyTorch OpenEnv Hackathon × SST | India AI Hackathon 2026*
-
-<br />
-
-<img src="https://via.placeholder.com/800x400.png?text=🎥+Insert+Your+Demo+GIF+Here" alt="CareCoordEnv Demo" width="800" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"/>
-<br />
-<br />
-
-</div>
-
-CareCoordEnv simulates the daily back-office work of a care‑coordination assistant – routing specialist referrals, recovering denied prior authorizations, and arranging urgent post‑discharge follow‑up. It is built following the standard `step()` / `reset()` / `state()` API with fully typed Pydantic models.
-
-> **💡 Why this matters:** Care coordination is a real operational bottleneck in healthcare. A strong agent must combine policy understanding, workflow reasoning, deadline awareness, safe escalation, and document/scheduling discipline. This environment focuses on **operational execution**, not clinical diagnosis, making it safe, reproducible, and valuable for agent research.
+<p align="center">
+  <a href="#-setup--installation">🚀 Quick Start</a> ·
+  <a href="#-action-space">📖 Docs</a> ·
+  <a href="#-running-tests">🧪 Run Tests</a> ·
+  <a href="#-hugging-face-spaces-deployment">🌐 Deploy</a> ·
+  <a href="#-acknowledgements">🤝 Contribute</a>
+</p>
 
 ---
 
-## 🧠 Architecture Overview
+## 🎥 Demo
 
-<div align="center">
-  <img src="https://via.placeholder.com/800x400.png?text=🧠+Insert+Your+Architecture+Diagram+Here" alt="Architecture Diagram" width="800" style="border-radius: 8px;"/>
-</div>
+> *GIF demo coming soon — run `python inference.py` from `care_coord_env/` to see the agent in action.*
+
+<!-- Replace the placeholder below with your actual demo GIF -->
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    LIVE AGENT DEMO                          │
+│                                                             │
+│  [START] task=easy_referral_routing  model=gpt-4o          │
+│  [STEP 1] review_case(referral_details)   reward=+0.10     │
+│  [STEP 2] route_referral(prov_derm_north) reward=+0.25     │
+│  [STEP 3] schedule_visit(slot_north_3d)   reward=+0.25     │
+│  [STEP 4] finalize_case(scheduled)        reward=+0.15     │
+│  [END]  success=True  steps=7  score=1.00 ✅               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🧠 Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│                        CareCoordEnv System                          │
+│                                                                     │
+│   ┌──────────────┐        HTTP / WebSocket        ┌─────────────┐   │
+│   │              │ ──── /reset ─────────────────► │             │   │
+│   │   AI Agent   │ ──── /step  ─────────────────► │   FastAPI   │   │
+│   │  (LLM-based) │ ◄─── Observation + Reward ──── │   Server    │   │
+│   │              │ ──── /state ─────────────────► │  (app.py)   │   │
+│   └──────────────┘                                └──────┬──────┘   │
+│                                                          │           │
+│          ┌───────────────────────────────────────────────┤           │
+│          │                                               │           │
+│          ▼                                               ▼           │
+│   ┌─────────────┐   score delta   ┌─────────────────────────────┐   │
+│   │ graders.py  │ ◄────────────── │ care_coord_env_environment  │   │
+│   │(Deterministic│                │       (Main Engine)         │   │
+│   │  Scoring)   │                 │  State ▸ Action ▸ Reward    │   │
+│   └─────────────┘                 └──────────────┬──────────────┘   │
+│                                                  │                   │
+│          ┌───────────────────┬───────────────────┤                   │
+│          ▼                   ▼                   ▼                   │
+│   ┌─────────────┐   ┌──────────────┐   ┌──────────────────┐         │
+│   │  models.py  │   │task_library  │   │    Pydantic      │         │
+│   │(Typed Schema│   │ .py (Tasks)  │   │ Observation /    │         │
+│   │  Pydantic)  │   │ Easy·Med·Hard│   │ Action / State   │         │
+│   └─────────────┘   └──────────────┘   └──────────────────┘         │
+│                                                                     │
+│                   🐳 Dockerised · ☁️ HF Spaces · ✅ OpenEnv          │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 💡 Why CareCoordEnv?
+
+Care coordination is a real operational bottleneck in healthcare. A strong agent must combine **policy understanding**, **workflow reasoning**, **deadline awareness**, **safe escalation**, and **document/scheduling discipline**.
+
+This environment focuses on **operational execution** rather than clinical diagnosis, which makes it safer, reproducible, and useful for agent research.
 
 ---
 
 ## 📦 Key Features
 
-- ✅ **Real‑world domain:** Healthcare referral, prior authorization, and discharge follow‑up.
-- ✅ **Full OpenEnv compliance:** Typed `Observation`, `Action`, `State` models; `openenv validate` passes.
-- ✅ **3 Tasks with increasing difficulty:** Easy → Medium → Hard.
-- ✅ **Deterministic programmatic graders:** Scores always in `[0.0, 1.0]`, zero randomness.
-- ✅ **Dense reward shaping:** Reward = progress difference (`score_after - score_before - penalty`).
-- ✅ **Baseline inference script:** Uses OpenAI client, reads env vars, produces reproducible logs.
-- ✅ **Containerised:** Dockerfile included, ready for deployment to Hugging Face Spaces.
-- ✅ **Comprehensive documentation:** Action/observation spaces, setup, and usage examples.
+| Feature | Detail |
+|:---|:---|
+| 🏥 **Real-world domain** | Healthcare referral, prior authorization, and post-discharge follow-up |
+| ✅ **Full OpenEnv compliance** | Typed `Observation`, `Action`, and `State` models with FastAPI runtime |
+| 📶 **3 difficulty tiers** | Easy → Medium → Hard with distinct workflows |
+| 🎯 **Deterministic graders** | Scores always stay in `[0.0, 1.0]` and remain fully auditable |
+| 💰 **Dense reward shaping** | `reward = score_after - score_before - penalty` on every step |
+| 🤖 **Baseline inference script** | OpenAI-client-based, env-driven, and log-friendly |
+| 🐳 **Containerised** | Dockerfile included, ready for local runs and Spaces deployment |
+| 📚 **Complete documentation** | Action space, observation space, setup, and usage examples |
 
 ---
 
 ## 🧩 Task Catalog
 
-| Difficulty | Task ID | What the agent must do |
-| :--- | :--- | :--- |
-| 🟢 **Easy** | `easy_referral_routing` | Route a dermatology referral to the correct in‑network provider and book the earliest acceptable slot. |
-| 🟡 **Medium** | `medium_prior_auth_recovery` | Recover a denied MRI prior authorization: identify missing document, request it, resubmit, and close as authorised. |
-| 🔴 **Hard** | `hard_post_discharge_followup` | Escalate worsening heart‑failure symptoms, route to cardiology clinic, book follow‑up within 7 days, arrange accessible covered transport, and finalise correctly. |
+| Difficulty | Task ID | Agent Objective |
+|:---:|:---|:---|
+| 🟢 **Easy** | `easy_referral_routing` | Route a dermatology referral to the correct in-network provider and book the earliest acceptable slot. |
+| 🟡 **Medium** | `medium_prior_auth_recovery` | Recover a denied MRI prior authorization: identify the missing document, request it, resubmit, and close as authorised. |
+| 🔴 **Hard** | `hard_post_discharge_followup` | Escalate worsening heart-failure symptoms, route to the cardiology clinic, book follow-up within 7 days, arrange accessible covered transport, and finalise correctly. |
 
-*Each task has a clear objective, a set of allowed actions, and a deterministic grader that computes a score between `0.0` and `1.0` based on the completion of key steps.*
+Each task has a clear objective, a bounded action set, and a deterministic grader that computes a score between `0.0` and `1.0`.
 
 ---
 
 ## 🎮 Action Space
 
-The environment uses a single typed action model `CareCoordAction`. Depending on the task, only a subset of action types is allowed (visible in the observation).
+The environment uses a single typed action model, `CareCoordAction`. Depending on the task, only a subset of action types is allowed at any step, and the current observation makes that explicit.
 
-### 🛠️ Action Types
-* `review_case` – Examine a case section (e.g., `"referral_details"`, `"insurance_rules"`)
-* `route_referral` – Select a provider (by `provider_id`) for a given `specialty`
-* `request_document` – Request a missing document by `document_id`
-* `submit_authorization` – Resubmit prior authorization after gathering requirements
-* `schedule_visit` – Book a slot (`slot_id`) for a given `provider_id`
-* `arrange_transport` – Choose a transport option by `transport_id`
-* `escalate_case` – Escalate symptoms or unresolved issues (with a `summary`)
-* `finalize_case` – Complete the task with a `resolution_code` and `summary`
+### Action Types
 
-**Example Action (Python):**
+| Action | Description |
+|:---|:---|
+| `review_case` | Examine a case section such as `"referral_details"` or `"insurance_rules"` |
+| `route_referral` | Select a provider by `provider_id` for a given `specialty` |
+| `request_document` | Request a missing document by `document_id` |
+| `submit_authorization` | Resubmit prior authorization after gathering requirements |
+| `schedule_visit` | Book a slot by `slot_id` for a given `provider_id` |
+| `arrange_transport` | Choose a transport option by `transport_id` |
+| `escalate_case` | Escalate symptoms or unresolved issues with a short `summary` |
+| `finalize_case` | Complete the task with a `resolution_code` and `summary` |
+
+### Example Action
+
 ```python
 from care_coord_env import CareCoordAction
 
 action = CareCoordAction(
     action_type="route_referral",
     provider_id="prov_derm_north",
-    specialty="Dermatology"
+    specialty="Dermatology",
 )
-(See models.py for the full typed schema.)👁️ Observation SpaceCareCoordObservation provides the agent with all necessary context for the next decision. Key fields include:FieldDescriptiontask_id, task_title, difficultyTask metadataobjectiveHuman‑readable goalchecklistStep‑by‑step completion hintspatient_summaryRelevant clinical and demographic infoallowed_action_typesWhich actions are currently permittedvisible_sections, revealed_textCase sections that can be reviewedprovider_optionsList of available providers with attributesscheduling_slotsAvailable appointment slotsdocument_queueDocuments that can be requestedauthorization_statusCurrent prior‑auth statetransport_optionsAccessible transport choicesblockersObstacles that must be resolvedcurrent_grader_score, score_breakdownReal‑time progress signallast_action_feedback, reward_rationaleImmediate feedback for the last step⚙️ State Space (Internal)CareCoordState tracks the underlying workflow state. This state is exposed via the state() endpoint for debugging and analysis:Sections reviewedSelected provider and scheduled slotRequested and received documentsAuthorization statusTransport arrangementEscalation completionFinal resolution codeCumulative reward and current grader score🎁 Reward DesignRewards are dense and shaped using deterministic grader deltas:Compute task score before the action.Apply the action.Compute task score after the action.Reward = score_after - score_before - penaltyUseful actions increase the score → positive reward.Invalid / low‑value actions (e.g., reviewing irrelevant sections, repeating actions) incur a small penalty.The final episode score is the grader’s final score (always between 0.0 and 1.0).📊 Graders & Reference ScoresEach task has a deterministic, programmatic grader implemented in graders.py. Graders are rule‑based (no randomness), return a score in [0.0, 1.0] with a detailed breakdown, and reflect partial progress.Because graders are deterministic, the environment is reproducible and easy to audit.Maximum Possible Scores:easy_referral_routing → 1.00medium_prior_auth_recovery → 1.00hard_post_discharge_followup → 1.00Baseline scores from the provided inference.py script depend on the LLM used. A capable model (e.g., GPT‑4o) should achieve near‑perfect scores on all tasks when given the correct prompts.🚀 Setup & InstallationPrerequisitesPython: 3.10 or higherDocker: (for containerised execution)OpenEnv CLI: pip install openenv-coreLocal DevelopmentClone the repository and navigate to the project root:Bashcd care_coord_env
-Create a virtual environment and activate it:Bashpython3 -m venv .venv
-source .venv/bin/activate   # On Windows: .venv\Scripts\activate
-Install the package in editable mode:Bashpip install -e .
-🔐 Environment Variables for InferenceThe baseline script inference.py uses the OpenAI client. Provide the following variables (e.g., in a .env file or export them):Bashexport OPENAI_API_KEY="your_openai_key"
-export MODEL_NAME="gpt-4o"               # or any model supported by your endpoint
-export API_BASE_URL="[https://api.openai.com/v1](https://api.openai.com/v1)"
-export HF_TOKEN="your_huggingface_token" # optional, for pushing to Spaces
-⚠️ Security Warning: Never commit real keys to version control. Use .env and add it to .gitignore.🖥️ Running the Environment ServerStart the FastAPI server locally:Bashuvicorn server.app:app --host 0.0.0.0 --port 8000 --reload
-The server will be available at http://localhost:8000.Client ExamplePythonfrom care_coord_env import CareCoordAction, CareCoordEnv
+```
+
+> See [`models.py`](./care_coord_env/models.py) for the full typed schema.
+
+---
+
+## 👁️ Observation Space
+
+`CareCoordObservation` provides the agent with the state it needs for the next decision.
+
+<details>
+<summary><b>Click to expand field reference</b></summary>
+
+| Field | Description |
+|:---|:---|
+| `task_id`, `task_title`, `task_type`, `difficulty` | Task metadata |
+| `objective`, `objective_checklist` | Human-readable goal and checklist |
+| `patient_name`, `patient_age`, `patient_brief` | Patient context relevant to operations |
+| `allowed_action_types` | Which actions are currently permitted |
+| `available_sections`, `visible_sections`, `visible_section_content` | Reviewable sections and the content already revealed |
+| `provider_options` | Available providers with typed attributes |
+| `available_slots` | Appointment slots currently visible |
+| `documents` | Documents and their current states |
+| `authorization_status` | Current prior-auth state |
+| `transport_options` | Accessible transport choices |
+| `blockers` | Obstacles that still need resolution |
+| `progress`, `current_score`, `score_breakdown` | Structured progress and real-time grading signal |
+| `last_action_feedback`, `reward_rationale` | Immediate feedback for the last step |
+
+</details>
+
+---
+
+## 🧠 State Space (Internal)
+
+`CareCoordState` tracks the underlying workflow state across an episode, including:
+
+- reviewed sections
+- selected provider and scheduled slot
+- requested and received documents
+- authorization status
+- transport arrangement
+- escalation completion
+- final resolution code
+- cumulative reward and current score
+
+> Exposed via the `/state` endpoint for debugging and analysis.
+
+---
+
+## 🎁 Reward Design
+
+Rewards are dense and shaped using deterministic grader deltas:
+
+```text
+1. Compute task score BEFORE the action
+2. Apply the action
+3. Compute task score AFTER the action
+4. reward = score_after - score_before - penalty
+```
+
+- ✅ Useful actions raise the score and produce positive reward
+- ❌ Invalid or redundant actions incur a small penalty
+- 🏁 Final episode score is the grader's score in `[0.0, 1.0]`
+
+This gives the agent meaningful feedback at each step instead of only at episode end.
+
+---
+
+## 📊 Graders & Reference Scores
+
+Each task has a deterministic, rule-based grader in [`graders.py`](./care_coord_env/graders.py):
+
+- ✔️ No randomness, so results are reproducible and auditable
+- ✔️ Returns a score in `[0.0, 1.0]` with a detailed breakdown
+- ✔️ Rewards partial progress, not just all-or-nothing completion
+
+| Task | Max Score | Happy-Path Score |
+|:---|:---:|:---:|
+| `easy_referral_routing` | **1.00** | **1.00** |
+| `medium_prior_auth_recovery` | **1.00** | **1.00** |
+| `hard_post_discharge_followup` | **1.00** | **1.00** |
+
+> A strong model with the right prompts should be able to reach near-perfect scores on all three tasks.
+
+---
+
+## 🚀 Setup & Installation
+
+### Prerequisites
+
+- Python **3.10+**
+- **Docker** for containerised execution
+- OpenEnv CLI: `pip install openenv-core`
+
+### Local Development
+
+```bash
+# 1. Enter the environment project
+cd care_coord_env
+
+# 2. Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
+# 3. Install in editable mode
+pip install -e .
+```
+
+---
+
+## 🔐 Environment Variables
+
+```bash
+export MODEL_NAME="gpt-4o"
+export OPENAI_API_KEY="your_openai_key"     # optional if HF_TOKEN is used as the API key
+export API_BASE_URL="https://api.openai.com/v1"
+export HF_TOKEN="your_huggingface_token"    # currently required by inference.py
+```
+
+> ⚠️ Never commit real keys. Keep local secrets out of git.
+
+---
+
+## 🖥️ Running the Server
+
+From inside `care_coord_env/`:
+
+```bash
+uvicorn server.app:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Server available at: `http://localhost:8000`
+
+### Client Example
+
+```python
+from care_coord_env import CareCoordAction, CareCoordEnv
 
 with CareCoordEnv(base_url="http://localhost:8000").sync() as env:
-    # Start a new episode with the easy task
     result = env.reset(task_id="easy_referral_routing")
     print(result.observation.task_title)
 
-    # Take a step
     action = CareCoordAction(action_type="review_case", section="referral_details")
     result = env.step(action)
     print(f"Reward: {result.reward}")
     print(f"Feedback: {result.observation.last_action_feedback}")
-🧪 Testing & InferenceRunning TestsRun the full test suite (covers environment flows, state transitions, and grader correctness):Bashpython -m unittest discover -s tests
-🤖 Baseline Inference ScriptThe file inference.py runs all three tasks against a model using the OpenAI client, producing structured logs required by the hackathon evaluator.Bashpython inference.py
-Expected output format:Plaintext[START] task=easy_referral_routing model=gpt-4o
-[STEP] step=1 action=review_case(section=referral_details) reward=+0.15 done=False error=None
+```
+
+---
+
+## 🧪 Running Tests
+
+From inside `care_coord_env/`:
+
+```bash
+python -m unittest discover -s tests
+```
+
+These tests cover environment flows, state transitions, and inference smoke behavior.
+
+---
+
+## 🤖 Baseline Inference Script
+
+From inside `care_coord_env/`:
+
+```bash
+python inference.py
+```
+
+**Expected log format:**
+
+```text
+[START] task=easy_referral_routing env=care_coord_env model=gpt-4o
+[STEP] step=1 action={"action_type":"review_case","section":"referral_details"} reward=0.1000 done=false error=null
 ...
-[END] success=True steps=7 score=1.00 rewards=[...]
-🐳 Docker Build & RunThe repository includes a Dockerfile at the root for containerised execution (required for Hugging Face Spaces).Build the image:Bashdocker build -t care_coord_env-env:latest .
-Run the container:Bashdocker run -p 8000:8000 care_coord_env-env:latest
-🌐 OpenEnv & Hugging Face SpacesOpenEnv ValidationEnsure your environment complies with the OpenEnv specification:Bashopenenv validate .
-Hugging Face DeploymentThis environment is configured as a Docker‑based OpenEnv Space.Bashopenenv push
-After deployment, the Space will publicly expose endpoints required for evaluation (/reset, /step, /state, /schema, /health, /ws, /web).📁 Project StructurePlaintextcare_coord_env/
-├── .dockerignore
-├── .env.example
-├── __init__.py
-├── client.py                 # Sync/async client for the environment
-├── docs/
-│   └── project_blueprint.md
-├── graders.py                # Deterministic scoring logic
-├── inference.py              # Baseline inference script (root)
-├── models.py                 # Typed Pydantic models
-├── openenv.yaml              # OpenEnv metadata
-├── pyproject.toml
-├── README.md                 # This file
-├── task_library.py           # Task definitions and data
-├── tests/
-│   ├── test_environment_flows.py
-│   └── test_inference_smoke.py
-└── server/
-    ├── app.py                # FastAPI app
-    ├── care_coord_env_environment.py  # Main environment engine
-    ├── Dockerfile            # Dockerfile for server
-    └── requirements.txt
-🛠️ Troubleshooting Common IssuesProblemLikely FixModuleNotFoundError: No module named 'care_coord_env'Activate venv and run pip install -e .openenv: command not foundpip install openenv-core while venv is activeDocker build failsEnsure Docker Desktop is running and you have internet accessPort 8000 already in useStop the existing process or use --port 8001inference.py returns 0.0 scoresCheck your OpenAI API key quota; set OPENAI_API_KEY correctlyopenenv validate failsVerify openenv.yaml exists and models are correctly typed✅ Submission ChecklistBefore final submission, confirm the following:[x] README.md (this file) is complete[x] inference.py is in the project root[x] Dockerfile is in the project root[x] openenv.yaml exists and passes validation[x] 3 tasks are defined with deterministic graders[x] All tests pass (python -m unittest discover -s tests)[x] docker build succeeds[x] openenv validate . passes[x] Hugging Face Space deploys and responds to /reset[x] Baseline script runs to completion with a valid API key[x] No hardcoded secrets in the repository📜 License & AcknowledgementsThis project is open‑source and available under the MIT License.🙏 Acknowledgements: Built for the Meta PyTorch OpenEnv Hackathon × SST | India AI Hackathon 2026. Special thanks to the OpenEnv team, Hugging Face, and PyTorch for the framework and support.Questions or feedback? Open an issue or reach out via the Hugging Face Space community tab.
+[END] success=true steps=7 score=1.0000 rewards=[...]
+```
+
+> If required environment variables are missing, the script exits with a clear error message.
+
+---
+
+## 🐳 Docker
+
+From inside `care_coord_env/`:
+
+```bash
+# Build
+docker build -t care_coord_env-env:latest .
+
+# Run
+docker run -p 8000:8000 care_coord_env-env:latest
+```
+
+---
+
+## ✅ OpenEnv Validation
+
+From inside `care_coord_env/`:
+
+```bash
+openenv validate .
+```
+
+Checks include `openenv.yaml`, typed models, and the environment API surface.
+
+---
+
+## 🌐 Hugging Face Spaces Deployment
+
+From inside `care_coord_env/`:
+
+```bash
+openenv push
+```
+
+After deployment, the environment exposes endpoints such as:
+
+| Endpoint | Purpose |
+|:---:|:---|
+| `/reset` | Start a new episode |
+| `/step` | Submit an action |
+| `/state` | Inspect internal state |
+| `/schema` | View typed models |
+| `/health` | Liveness check |
+| `/ws` | WebSocket interface |
+| `/web` | Browser UI |
+
+> The Space should be publicly accessible for external evaluation.
+
+---
+
+## 📁 Project Structure
+
+```text
+.
+├── README.md
+└── care_coord_env/
+    ├── .dockerignore
+    ├── .env.example
+    ├── __init__.py
+    ├── client.py
+    ├── docs/
+    │   └── project_blueprint.md
+    ├── Dockerfile
+    ├── graders.py
+    ├── inference.py
+    ├── models.py
+    ├── openenv.yaml
+    ├── pyproject.toml
+    ├── server/
+    │   ├── app.py
+    │   ├── care_coord_env_environment.py
+    │   ├── Dockerfile
+    │   └── requirements.txt
+    ├── task_library.py
+    ├── tests/
+    │   ├── test_environment_flows.py
+    │   └── test_inference_smoke.py
+    └── uv.lock
+```
+
+---
+
+## 🛠️ Troubleshooting
+
+<details>
+<summary><b>Click to expand common issues & fixes</b></summary>
+
+| Problem | Fix |
+|:---|:---|
+| `ModuleNotFoundError: No module named 'care_coord_env'` | Activate the venv and run `pip install -e .` from `care_coord_env/` |
+| `openenv: command not found` | Run `pip install openenv-core` inside the active venv |
+| Docker build fails | Ensure Docker Desktop is running and network access is available |
+| Port 8000 already in use | Stop the existing process or run with a different port |
+| `inference.py` exits before running | Set `MODEL_NAME` and `HF_TOKEN`, plus any API credentials you need |
+| `openenv validate` fails | Confirm `openenv.yaml` exists and typed models import cleanly |
+
+</details>
+
+---
+
+## ✅ Submission Checklist
+
+- [x] `README.md` is complete
+- [ ] `python -m unittest discover -s tests` passes
+- [ ] `docker build -t care_coord_env-env:latest .` succeeds
+- [ ] `openenv validate .` passes
+- [ ] `openenv push` deploys successfully
+- [ ] `inference.py` runs to completion with valid credentials
+- [ ] No hardcoded secrets remain in the repository
+
+---
+
+## 📜 License
+
+Source headers in this project reference a **BSD-style license**. Add or verify the repository `LICENSE` file before publishing externally.
+
+---
+
+## 🙏 Acknowledgements
+
+<p align="center">
+  Built for the <strong>Meta PyTorch OpenEnv Hackathon × SST | India AI Hackathon 2026</strong>
+</p>
+
+<p align="center">
+  Special thanks to the <strong>OpenEnv team</strong>, <strong>Hugging Face</strong>, and <strong>PyTorch</strong> for the framework and support.
+</p>
+
+<p align="center">
+  <em>Questions or feedback? Open an issue or reach out via the Hugging Face Space community tab.</em>
+</p>
+
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:00bfa5,100:1a73e8&height=120&section=footer" width="100%"/>
+</p>
